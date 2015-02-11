@@ -18,6 +18,12 @@ ave.rel.den <- fish%>% # combines species for mean relative fish density
 length <- fs_lgh[-c(2:3,6:7)]#2009 fish
 rm(fs_lgh)
 
+#Summary
+smry <-fs_smry[c(1,4,6:7,11:15)]
+rm(fs_smry)
+all <-left_join(smry, ave.rel.den) #includes ave density of fish
+rm(smry)
+
 #Habitat
 hab <-fs_hab[c(1,7:9,12:14,16:18,20:21,26:28,30:31)]
 hab <-na.omit(hab)
@@ -27,38 +33,39 @@ ave.hab <-hab%>%
   group_by(Site)%>%
   summarise_each(funs(mean))
 rm(hab)  
-hb <-ave.hab[-c(1)]
+hb <-ave.hab
 
-boxplot(scale(hb))
-boxplot(scale(log(hb+1)))
+#Data for analysis that includes relative fish abundance
+hb_fish <-left_join(hb,all,by="Site")
+hbfish <-hb_fish[-c(1,3,18:25)]
+rm(hb_fish)
+hbfish <-na.omit(hbfish)
+hbfish.lg <- log(hbfish+1) #log transformed data
+
+  
+boxplot(scale(hbfish))
+boxplot(scale(log(hbfish+1)))
 cor.matrix(scale(hb))
 
-cor(log(hb+1))
-hb.lg <- log(hb+1)
+cor(log(hbfish+1))
 
-#Summary
-smry <-fs_smry[c(1,4,6:7,11:15)]
-rm(fs_smry)
-all <-left_join(smry, ave.rel.den) #includes ave density of fish
-rm(smry)
 
-lshap <- lapply(hb.lg, shapiro.test) #shapiro test on log transformed data
+
+lshap <- lapply(hbfish.lg, shapiro.test) #shapiro test on log transformed data
 lres <- sapply(lshap, `[`, c("statistic","p.value"))
 t(lres)
-
-
 
 #----------
 
 #PCA 
 require(MASS) #loads the PCA package
-pca <- princomp(scale(hb.lg)) #creates a PC matrix using the correlation matrix
+pca <- princomp(scale(hbfish.lg)) #creates a PC matrix using the correlation matrix
 biplot(pca, expand = 1.05,main = "Biplot", xlab = "Comp.1 (37.9%)", ylab = "Comp.2 (20.4%)")
 #Scale for sites(PC matrix-pca$scores) on top, scale for variables (vectors-loadings) along bottom
 summary(pca) #proportion of variance is eigenvalues for each PC
 
 plot(pca, main="Scree Plot") #Scree plot
-broken.stick(18) #After comparing, keep comp 1 & 2
+broken.stick(16) #After comparing, keep comp 1 & 2
 
 round(loadings(pca),2) #Check eigenvectors: length of vector is relative variance and how much it contributes to the PC
 #Principal component loading (pg 50).  The further from zero, the greater the contribution.
@@ -70,10 +77,10 @@ round((pca$scores),2) #PC matrix showing site scores for all PCs. How far each i
 
 #---------
 #create shepard diagram
-wtr.d<-round(var(scale(hb.lg,scale=F)),0)  #calculate variance-covariance matrix and save it to 'wtr.d'
+wtr.d<-round(var(scale(hbfish.lg,scale=F)),0)  #calculate variance-covariance matrix and save it to 'wtr.d'
 e.1<-eigen(wtr.d) #eigen-analysis
-pc.matrix.1<-(as.matrix(scale(hb.lg, scale=F)))%*%e.1$vectors #calculate pc.matrix
-euc<-dist(scale(hb.lg, scale=F))  #calculate Euclidian distance among site for centered original data
+pc.matrix.1<-(as.matrix(scale(hbfish.lg, scale=F)))%*%e.1$vectors #calculate pc.matrix
+euc<-dist(scale(hbfish.lg, scale=F))  #calculate Euclidian distance among site for centered original data
 round(euc,2)
 euc.1<-dist(pc.matrix.1[,c(1,2)])  #calculate Euclidian distance among sites in PCA space using only first 2 PCs
 round(euc.1,2)
