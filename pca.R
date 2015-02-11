@@ -19,7 +19,7 @@ length <- fs_lgh[-c(2:3,6:7)]#2009 fish
 rm(fs_lgh)
 
 #Habitat
-hab <-fs_hab[c(1,7:9,12:14,16:18,20,22, 24,26:28,30:31)]
+hab <-fs_hab[c(1,7:9,12:14,16:18,20:21,26:28,30:31)]
 hab <-na.omit(hab)
 rm(fs_hab)
 str(hab)
@@ -41,6 +41,12 @@ smry <-fs_smry[c(1,4,6:7,11:15)]
 rm(fs_smry)
 all <-left_join(smry, ave.rel.den) #includes ave density of fish
 rm(smry)
+
+lshap <- lapply(hb.lg, shapiro.test) #shapiro test on log transformed data
+lres <- sapply(lshap, `[`, c("statistic","p.value"))
+t(lres)
+
+
 
 #----------
 
