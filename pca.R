@@ -1,14 +1,19 @@
 #USFS habitat and fish pop analysis
 
+#----
 #CT & DV
 fs_fish <- read.csv("fs_fish.csv")
 fish<-fs_fish[c(1:3,9, 17:18)]
 rm(fs_fish)
 fish <-na.omit(fish)
+
 library(dplyr)
 pop <- fish%>% 
   group_by(Site, Fish.Species)%>%
   summarise(pop.ave=mean(Pop_Est))
+
+library(tidyr)
+pop <- spread(pop, Fish.Species, pop.ave)
 
 #Fish length
 fs_lgh <- read.csv("fs_fish_length.csv")
@@ -38,8 +43,8 @@ hab.l <-scale(log(hab.1+1))
 boxplot(scale(hab.1))
 boxplot(hab.l)
 
-#Data for analysis that includes relative fish abundance
 #-------
+#Data for analysis that includes relative fish abundance
 hb_fish <-left_join(hab,fish,by="Site")
 hbfish <-hb_fish[-c(1,3,18:25)]
 rm(hb_fish)
@@ -56,8 +61,8 @@ lshap <- lapply(hbfish.lg, shapiro.test) #shapiro test on log transformed data
 lres <- sapply(lshap, `[`, c("statistic","p.value"))
 t(lres)
 
-#PCA 
 #----------
+#PCA 
 require(MASS) #loads the PCA package
 pca <- princomp(hab.l, cor=TRUE) #creates a PC matrix using the correlation matrix
 biplot(pca, expand = 1.05,main = "Biplot", xlab = "Comp.1 (38.0%)", ylab = "Comp.2 (19.0%)")
@@ -75,14 +80,14 @@ round((pca$scores),2) #PC matrix showing site scores for all PCs. How far each i
 #This is the distribution of PC1 and PC2 site scores (top scale).  Each variable for each component. 
 #In this case due to broken stick, PC1 and PC2
 
-#channel type plot
 #-----
-
+#channel type plot
 plot(pca$scores[,1], pca$scores[,2],xlab="PC 1", ylab="PC 2", type='n') # plot the first two PCs.  Can you interpret the plot?
 text(pca$scores[,1], pca$scores[,2],labels=smry$Chan.Type, lwd=2)
+plot(pca$scores[,1], pca$scores[,2],xlab="PC 1", ylab="PC 2", cex=3) # plot the first two PCs
 
-#create Shepard diagram
 #---------
+#create Shepard diagram
 head(round(pca$scores,2))
 euc<-dist(hab.l)#Computes the distance matrix in the log transformed data (multidimensional space)
 euc.1<-dist(pca$scores[,c(1,2)]) #Computes the distance matrix in the PC matrix (reduced space)

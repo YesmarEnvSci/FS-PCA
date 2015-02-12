@@ -18,42 +18,18 @@ opts_chunk$set(fig.width=6, fig.height=6, fig.path='Figs/',
 ```
 
 ```{r dta,echo=FALSE, results='hide', include=FALSE}
-fs_fish <- read.csv("fs_fish.csv")
-fs_lgh <- read.csv("fs_fish_length.csv")
-fs_smry <- read.csv("fs_fish_smry.csv")
-fs_hab <- read.csv("fs_habitat.csv")
-
-#CT & DV
-fish<-fs_fish[c(1:3,17:18)]
-rm(fs_fish)
-fish <-na.omit(fish)
-library(dplyr)
-ave.rel.den <- fish%>% # combines species for mean relative fish density
-  group_by(Site)%>%
-  summarise(ave.den=mean(Species_Density..fish.100sq.m.))
-
-#Fish length
-length <- fs_lgh[-c(2:3,6:7)]#2009 fish
-rm(fs_lgh)
-
 #Habitat
-hab <-fs_hab[c(1,7:9,12:14,16:18,20:21,26:28,30:31)]
+library(dplyr)
+fs_hab <- read.csv("fs_habitat.csv")
+hab <-fs_hab[c(1,6:9,12:14,16:18,20:21,26:28,30:31)]
 hab <-na.omit(hab)
 rm(fs_hab)
-str(hab)
 ave.hab <-hab%>%
   group_by(Site)%>%
   summarise_each(funs(mean))
-rm(hab)  
-hb <-ave.hab[-c(1)]
-
-hb.lg <- log(hb+1)
-
-#Summary
-smry <-fs_smry[c(1,4,6:7,11:15)]
-rm(fs_smry)
-all <-left_join(smry, ave.rel.den) #includes ave density of fish
-rm(smry)
+  
+hab.1 <-ave.hab[-c(1,2)]
+hab.l <-scale(log(hab.1+1))
 ```
 
 **Assumptions**
@@ -63,17 +39,12 @@ Due to the amount of missing data, I was unable to use all variables in the anal
 The normality assumption for most variables after log transformation had a p-value > 0.05 (Failed to reject $H_o$ (Figure 1).  Only three of the variables were suspect with a p-value < 0.05 (Reject $H_o$).  
 
 ```{r box, fig.cap="Boxplot of all 18 variables (log transformed and standardized with Z-score) used in analysis"}
-boxplot(scale(log(hb+1)))
+boxplot(scale(hab.1))
 ```
 
 
 *Table 1.  Study site, Channel Type, reach length and area, and relative fish density(CT & DV).*
-```{r , echo=FALSE, results='asis'}
-table1 <- all[-c(2,3, 8:9)]
 
-library(knitr)
-kable(table1)
-```
 
 **Ordination**
 
@@ -85,13 +56,13 @@ Synthetic component one accounts for 37.9% of the variance in the data, while co
 
 ```{r, echo=FALSE, fig.cap="Biplot of numeric habitat variables (Eigenvectors) indicating correlation among variables.  Scores(sites) showing euclidian distance to variable"}
 require(MASS) #loads the PCA package
-pca <- princomp(scale(hb.lg)) #creates a PC matrix using the correlation matrix
-biplot(pca, expand = 1.05,main = "Biplot", xlab = "Comp.1 (37.9%)", ylab = "Comp.2 (20.4%)")
+pca <- princomp(hab.l, cor=TRUE) #creates a PC matrix using the correlation matrix
+biplot(pca, expand = 1.05,main = "Biplot", xlab = "Comp.1 (38.0%)", ylab = "Comp.2 (19.0%)")
 ```
 
 Scree plot showing that approximately 50% of the variance in the data is represented in component one and two (Figure 3).
 
-```{r Scree, fig.cap="Scree plot of synthetic variable contribution to component 1 & 2."}
+```{r Scree, fig.cap="Scree plot of variance contribution to component 1 & 2."}
 plot(pca, main="Scree Plot") #Scree plot
 
 ```
@@ -99,20 +70,12 @@ plot(pca, main="Scree Plot") #Scree plot
 
 The Shepard diagram shows the distortion of each observation when ordination reduces variables from multidimensional space to reduced space.  The farther from the y=x axis, the worse the distortion (Figure 4).  To what extent does the reduced space preserve the distance relationships among objects?
 
-```{r shepard, echo=FALSE, results='hide'}
-wtr.d<-round(var(scale(hb.lg,scale=F)),0)  #calculate variance-covariance matrix and save it to 'wtr.d'
-e.1<-eigen(wtr.d) #eigen-analysis
-pc.matrix.1<-(as.matrix(scale(hb.lg, scale=F)))%*%e.1$vectors #calculate pc.matrix
-euc<-dist(scale(hb.lg, scale=F))  #calculate Euclidian distance among site for centered original data
-round(euc,2)
-euc.1<-dist(pc.matrix.1[,c(1,2)])  #calculate Euclidian distance among sites in PCA space using only first 2 PCs
-round(euc.1,2)
-
-```
-
-
 ```{r shpPlot, fig.cap= "Shepard diagram showing reduced space distance distortion among observations"}
-plot(euc,euc.1,main="Shepard diagram", xlab="Distance in Multidimensional space", ylab="Distance in Reduced space")
+head(round(pca$scores,2))
+euc<-dist(hab.l)#Computes the distance matrix in the log transformed data (multidimensional space)
+euc.1<-dist(pca$scores[,c(1,2)]) #Computes the distance matrix in the PC matrix (reduced space)
+plot(euc,euc.1,main="Shepards Diagram (PC=2)", xlab="Distance in Multidimensional space", ylab="Distance in Reduced space")   #Shepard diagram
+
 #Farther from y=x the more distortion
 ```
 
