@@ -6,17 +6,25 @@ fs_smry <- read.csv("fs_fish_smry.csv")
 fs_hab <- read.csv("fs_habitat.csv")
 
 #CT & DV
-fish<-fs_fish[c(1:3,17:18)]
+fish<-fs_fish[c(1:3,9, 17:18)]
 rm(fs_fish)
 fish <-na.omit(fish)
+
 library(dplyr)
-ave.rel.den <- fish%>% # combines species for mean relative fish density
-  group_by(Site)%>%
-  summarise(ave.den=mean(Species_Density..fish.100sq.m.))
+pop <- fish%>% 
+  group_by(Site, Fish.Species)%>%
+  summarise(pop.ave=mean(Pop_Est))
+
 
 #Fish length
 length <- fs_lgh[-c(2:3,6:7)]#2009 fish
 rm(fs_lgh)
+
+fk.l <-length%>%
+  group_by(site, species)%>%
+  summarise(fk.ave=mean(fk.length..mm.))
+rm(length)
+
 
 #Summary
 smry <-fs_smry[c(1,4,6:7,11:15)]
@@ -41,14 +49,12 @@ hbfish <-hb_fish[-c(1,3,18:25)]
 rm(hb_fish)
 hbfish <-na.omit(hbfish)
 hbfish.lg <- log(hbfish+1) #log transformed data
-
   
 boxplot(scale(hbfish))
 boxplot(scale(log(hbfish+1)))
 cor.matrix(scale(hb))
 
 cor(log(hbfish+1))
-
 
 
 lshap <- lapply(hbfish.lg, shapiro.test) #shapiro test on log transformed data
@@ -77,12 +83,8 @@ round((pca$scores),2) #PC matrix showing site scores for all PCs. How far each i
 
 #---------
 #create shepard diagram
-wtr.d<-round(var(scale(hbfish.lg,scale=F)),0)  #calculate variance-covariance matrix and save it to 'wtr.d'
-e.1<-eigen(wtr.d) #eigen-analysis
-pc.matrix.1<-(as.matrix(scale(hbfish.lg, scale=F)))%*%e.1$vectors #calculate pc.matrix
-euc<-dist(scale(hbfish.lg, scale=F))  #calculate Euclidian distance among site for centered original data
-round(euc,2)
-euc.1<-dist(pc.matrix.1[,c(1,2)])  #calculate Euclidian distance among sites in PCA space using only first 2 PCs
-round(euc.1,2)
-plot(euc,euc.1,main="Shepard diagram", xlab="Distance in Multidimensional space", ylab="Distance in Reduced space")
-#Farther from y=x the more distortion
+head(round(pca$scores,2))
+euc<-dist(hbfish.lg)#Computes the distance matrix in the log transformed data (mutidimensional space)
+euc.1<-dist(pca$scores[,c(1,2)]) #Computes the distance matrix in the PC matrix (reduced space)
+plot(euc,euc.1,main="PC=2", xlab="Distance in Multidimensional space", ylab="Distance in Reduced space")   #Shepard diagram
+
