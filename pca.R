@@ -68,8 +68,8 @@ biplot(pca, expand = 1.05,main = "Biplot", xlab = "Comp.1 (38.0%)", ylab = "Comp
 #Scale for sites(PC matrix-pca$scores) on top, scale for variables (vectors-loadings) along bottom
 summary(pca) #proportion of variance is eigenvalues for each PC
 
-plot(pca, main="Scree Plot") #Scree plot
-broken.stick(16) #After comparing, keep comp 1 & 2
+library(vegan)
+screeplot(pca, bstick = TRUE) #inertia= variance n PCA
 
 round(loadings(pca),2) #Check eigenvectors: length of vector is relative variance and how much it contributes to the PC
 #Principal component loading (pg 50).  The further from zero, the greater the contribution.
@@ -101,8 +101,12 @@ mod <-rda(hab~., data=fsh, scale=T)
 
 mod #Inertia is variance (Lec 6)
 summary(mod) #Species scores is eigenvectors
-plot(mod) #Biplot
+plot(mod, type="n") #Biplot
+text(mod, dis="cn")
+points(mod, pch=21, col="green", bg="yellow", cex=1.2)
+text(mod, "species", col="grey", cex=0.8)
 #Fish species is response variable(blue), explanatory variable is (red) and sites are black.
+
 
 vif.cca(mod)#Redundancy among species (Veriance inflation factor)
 # VIF > 4 or 5 suggests multi-collinearity; VIF > 10 is strong evidence 
