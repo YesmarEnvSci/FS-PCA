@@ -44,13 +44,6 @@ boxplot(scale(hab.1))
 boxplot(hab.l)
 
 #-------
-#Data for analysis that includes relative fish abundance
-hb_fish <-left_join(hab,fish,by="Site")
-hbfish <-hb_fish[-c(1,3,18:25)]
-rm(hb_fish)
-hbfish <-na.omit(hbfish)
-hbfish.lg <- log(hbfish+1) #log transformed data
-  
 boxplot(scale(hbfish))
 boxplot(scale(log(hbfish+1)))
 cor.matrix(scale(hb))
@@ -92,4 +85,47 @@ head(round(pca$scores,2))
 euc<-dist(hab.l)#Computes the distance matrix in the log transformed data (multidimensional space)
 euc.1<-dist(pca$scores[,c(1,2)]) #Computes the distance matrix in the PC matrix (reduced space)
 plot(euc,euc.1,main="Shepards Diagram (PC=2)", xlab="Distance in Multidimensional space", ylab="Distance in Reduced space")   #Shepard diagram
+
+#------
+#RDA
+hab <-hab.l
+fsh <- pop[,-1]
+library(vegan)
+mod <-rda(hab~., data=fsh, scale=T)
+
+mod #Inertia is variance (Lec 6)
+summary(mod) #Pcesies scores is eigenvectors
+plot(mod) #Biplot
+
+vif.fs(mod)#Redundancy among species (Veriance inflation factor)
+# VIF > 4 or 5 suggests multi-collinearity; VIF > 10 is strong evidence 
+#that collinearity is affecting the regression coefficients.
+
+#Selection procedure (AIC approach)- Hybrid approach, search method that compares models sequentially
+
+#Full model (with all Xs):
+rda.fs<-rda(log(hab+1)~., data=ws,scale=T)
+
+#Null model (with no Xs):
+mod.0<-rda(log(hab+1)~1, data=ws, scale=T)
+
+#Hybrid selection:
+mod.1<-step(mod.0, scope=formula(rda.ca))
+
+#Run VIF again on new selection.  See if there are any multi-col > 5
+#If yes, regress and drop higher ones that are correlated
+vif.fs(rda.ca.1)
+
+#Run VIF again to see if all are < 5
+vif.cca(rda.ca.2)
+
+#Test if RDA is significant
+anova.cca(rad.ca, step=1000)
+
+#Test if RDA axis is significant
+anova.cca(rad.ca,by=‘axis’, step=1000)
+
+
+
+
 
