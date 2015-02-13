@@ -14,6 +14,11 @@ pop <- fish%>%
 
 library(tidyr)
 pop <- spread(pop, Fish.Species, pop.ave)
+hist(pop$CT)
+hist(pop$DV)
+pop <-pop[-c(1)]
+pop.l <-log(pop+1)
+
 
 #Fish length
 fs_lgh <- read.csv("fs_fish_length.csv")
@@ -30,6 +35,7 @@ smry <-fs_smry[c(1,4,6:7,11:15)]
 rm(fs_smry)
 
 #Habitat
+library(dplyr)
 fs_hab <- read.csv("fs_habitat.csv")
 hab <-fs_hab[c(1,6:9,12:14,16:18,20:21,26:28,30:31)]
 hab <-na.omit(hab)
@@ -88,33 +94,32 @@ plot(euc,euc.1,main="Shepards Diagram (PC=2)", xlab="Distance in Multidimensiona
 
 #------
 #RDA
-hab <-hab.l
-fsh <- pop[,-1]
+hab <- hab.l
+fsh <- pop.l
 library(vegan)
 mod <-rda(hab~., data=fsh, scale=T)
 
 mod #Inertia is variance (Lec 6)
-summary(mod) #Pcesies scores is eigenvectors
+summary(mod) #Species scores is eigenvectors
 plot(mod) #Biplot
+#Fish species is response variable(blue), explanatory variable is (red) and sites are black.
 
-vif.fs(mod)#Redundancy among species (Veriance inflation factor)
+vif.cca(mod)#Redundancy among species (Veriance inflation factor)
 # VIF > 4 or 5 suggests multi-collinearity; VIF > 10 is strong evidence 
 #that collinearity is affecting the regression coefficients.
 
 #Selection procedure (AIC approach)- Hybrid approach, search method that compares models sequentially
 
 #Full model (with all Xs):
-rda.fs<-rda(log(hab+1)~., data=ws,scale=T)
-
+rda.fs<-rda(hab ~.,data=fsh,scale=T)
 #Null model (with no Xs):
-mod.0<-rda(log(hab+1)~1, data=ws, scale=T)
-
+rda.0<-rda(hab ~1, data=fsh, scale=T)
 #Hybrid selection:
-mod.1<-step(mod.0, scope=formula(rda.ca))
+rda.1<-step(rda.0, scope=formula(rda.fs))
 
 #Run VIF again on new selection.  See if there are any multi-col > 5
 #If yes, regress and drop higher ones that are correlated
-vif.fs(rda.ca.1)
+vif.cca(rda.ca.1)
 
 #Run VIF again to see if all are < 5
 vif.cca(rda.ca.2)
