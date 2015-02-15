@@ -14,10 +14,14 @@ pop <- fish%>%
 
 library(tidyr)
 pop <- spread(pop, Fish.Species, pop.ave)
+par(mfrow=c(1,2))
 hist(pop$CT)
 hist(pop$DV)
 pop <-pop[-c(1)]
 pop.l <-log(pop+1)
+par(mfrow=c(1,2))
+hist(pop.l$CT)
+hist(pop.l$DV)
 
 
 #Fish length
@@ -45,9 +49,8 @@ ave.hab <-hab%>%
   summarise_each(funs(mean))
   
 hab.1 <-ave.hab[-c(1,2)]
-hab.l <-scale(log(hab.1+1))
+hab.l <-log(hab.1+1)
 boxplot(scale(hab.1))
-boxplot(hab.l)
 
 #-------
 boxplot(scale(hbfish))
@@ -69,7 +72,7 @@ biplot(pca, expand = 1.05,main = "Biplot", xlab = "Comp.1 (38.0%)", ylab = "Comp
 summary(pca) #proportion of variance is eigenvalues for each PC
 
 library(vegan)
-screeplot(pca, bstick = TRUE) #inertia= variance n PCA
+screeplot(pca, bstick = TRUE, main="PCA") #inertia= variance n PCA
 
 round(loadings(pca),2) #Check eigenvectors: length of vector is relative variance and how much it contributes to the PC
 #Principal component loading (pg 50).  The further from zero, the greater the contribution.
@@ -80,33 +83,40 @@ round((pca$scores),2) #PC matrix showing site scores for all PCs. How far each i
 #In this case due to broken stick, PC1 and PC2
 
 #-----
-#channel type plot
-plot(pca$scores[,1], pca$scores[,2],xlab="PC 1", ylab="PC 2", type='n') # plot the first two PCs.  Can you interpret the plot?
+#channel type plot vs fish plot
+par(mfrow=c(2,2), bty="u",fg="black", bg="white")
+plot(pca$scores[,1], pca$scores[,2],xlab="PC 1", ylab="PC 2", pch=5) # plot the first two PCs
+plot(pca$scores[,1], pca$scores[,2],xlab="PC 1", ylab="PC 2", type='n') # plot the first two PCs.
 text(pca$scores[,1], pca$scores[,2],labels=smry$Chan.Type, lwd=2)
-plot(pca$scores[,1], pca$scores[,2],xlab="PC 1", ylab="PC 2", cex=3) # plot the first two PCs
+symbols(pca$scores[,1], pca$scores[,2],circles=pop[,1],inches=0.2, main="Cutthroat Trout") #show relative concentrations of CT among sites
+symbols(pca$scores[,1], pca$scores[,2],squares=pop[,2], inches=0.2, main="Dolly varden Charr") #show relative concentrations of DV among sites
 
 #---------
 #create Shepard diagram
-head(round(pca$scores,2))
-euc<-dist(hab.l)#Computes the distance matrix in the log transformed data (multidimensional space)
-euc.1<-dist(pca$scores[,c(1,2)]) #Computes the distance matrix in the PC matrix (reduced space)
-plot(euc,euc.1,main="Shepards Diagram (PC=2)", xlab="Distance in Multidimensional space", ylab="Distance in Reduced space")   #Shepard diagram
+euc<-dist(scale(hab.l)) #Calculate Euclidian distance among sites scale=centered to Z-score (multidimentional spcae). Check transformation and matrix used.
+euc.1<-dist(pca$scores[,c(1,2)]) #calculate Euclidian distance among sites in PCA space using only first 2 PCs (reduced space).
+plot(euc,euc.1,main="PC=2", xlab="Distance in Multidimensional space", ylab="Distance in Reduced space") #x=euc, y=euc.1  
 
 #------
 #RDA
 hab <- hab.l
 fsh <- pop.l
 library(vegan)
-mod <-rda(hab~., data=fsh, scale=T)
+library(MASS)
+mod <-rda(fsh~., data=hab, scale=T) #Full model RDA
 
 mod #Inertia is variance (Lec 6)
 summary(mod) #Species scores is eigenvectors
 plot(mod, type="n") #Biplot
-text(mod, dis="cn")
-points(mod, pch=21, col="green", bg="yellow", cex=1.2)
-text(mod, "species", col="grey", cex=0.8)
-#Fish species is response variable(blue), explanatory variable is (red) and sites are black.
+text(mod, dis="cn", col="red")
+points(mod, pch=21, col="darkgreen", bg="lightgrey", cex=1.2)
+text(mod, "species", col="black", cex=0.8)
+#Fish species is response variable(black), habitat explanatory variable is (red) and sites are green/grey.
 
+#Is the RDA model relationship between the two matrices significant?  (anova.cca: global permutation test)
+anova.cca(mod) #No, significant with p-value > 0.05
+
+#Can the RDA model be reduced?(step selection with AIC plus VIF)
 
 vif.cca(mod)#Redundancy among species (Veriance inflation factor)
 # VIF > 4 or 5 suggests multi-collinearity; VIF > 10 is strong evidence 
@@ -115,15 +125,24 @@ vif.cca(mod)#Redundancy among species (Veriance inflation factor)
 #Selection procedure (AIC approach)- Hybrid approach, search method that compares models sequentially
 
 #Full model (with all Xs):
-rda.fs<-rda(hab ~.,data=fsh,scale=T)
+rda.fs<-rda(fsh ~.,data=hab,scale=T)
 #Null model (with no Xs):
-rda.0<-rda(hab ~1, data=fsh, scale=T)
+rda.0<-rda(fsh ~1, data=hab, scale=T)
 #Hybrid selection:
 rda.1<-step(rda.0, scope=formula(rda.fs))
 
 #Run VIF again on new selection.  See if there are any multi-col > 5
 #If yes, regress and drop higher ones that are correlated
-vif.cca(rda.ca.1)
+hab.1 <-hab[-c(3)]
+rda.1<-rda(fsh ~.,data=hab.1,scale=T)
+vif.cca(rda.1) #Still high
+
+#Full model (with all Xs):
+rda.1<-rda(fsh ~.,data=hab,scale=T)
+#Null model (with no Xs):
+rda.0<-rda(fsh ~1, data=hab, scale=T)
+#Hybrid selection:
+rda.1<-step(rda.0, scope=formula(rda.fs))
 
 #Run VIF again to see if all are < 5
 vif.cca(rda.ca.2)
