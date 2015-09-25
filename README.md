@@ -1,2 +1,2 @@
 # FS-PCA
-USFS habitat &amp; pop data
+USFS resident fish habitat &amp; population data principal component analysis
